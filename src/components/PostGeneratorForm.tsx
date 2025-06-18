@@ -55,12 +55,29 @@ export default function PostGeneratorForm() {
   const [loadingCategories, setLoadingCategories] = useState(false);
   const [wpCredentials, setWpCredentials] = useState<{url: string, username: string, appPassword: string} | null>(null);
   const [generatingImage, setGeneratingImage] = useState(false);
+  const [lastSuccessfulCredentials, setLastSuccessfulCredentials] = useState<string>("");
 
   const handleLoadWpCategories = async (credentials: {url: string, username: string, appPassword: string}) => {
     if (!credentials.url || !credentials.username || !credentials.appPassword) {
       return;
     }
 
+    // Crea una stringa unica per le credenziali
+    const credentialsKey = `${credentials.url}|${credentials.username}|${credentials.appPassword}`;
+    
+    // Se le credenziali sono le stesse dell'ultima richiesta riuscita, non fare nulla
+    if (credentialsKey === lastSuccessfulCredentials) {
+      console.log("Categorie già caricate per queste credenziali, saltando richiesta");
+      return;
+    }
+
+    // Se è già in caricamento, non fare nulla
+    if (loadingCategories) {
+      console.log("Caricamento già in corso, saltando richiesta");
+      return;
+    }
+
+    console.log("Inizio caricamento categorie WordPress");
     setLoadingCategories(true);
     setWpCredentials(credentials);
 
@@ -82,12 +99,14 @@ export default function PostGeneratorForm() {
 
       if (data?.categories) {
         setWpCategories(data.categories);
+        setLastSuccessfulCredentials(credentialsKey); // Salva le credenziali di successo
         toast({
           title: "Categorie caricate!",
           description: `${data.categories.length} categorie trovate dal tuo sito WordPress.`
         });
         // Reset della categoria selezionata quando si caricano nuove categorie
         setCategory("");
+        console.log("Categorie caricate con successo:", data.categories.length);
       }
     } catch (error) {
       console.error('Error:', error);

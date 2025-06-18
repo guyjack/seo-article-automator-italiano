@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -16,17 +16,64 @@ export default function WordPressCredentialsForm({ post, onCredentialsChange, lo
   const [username, setUsername] = useState("");
   const [appPassword, setAppPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const lastCredentialsRef = useRef<string>("");
+  const timeoutRef = useRef<NodeJS.Timeout>();
 
-  // Effetto per notificare i cambiamenti delle credenziali
+  // Effetto per notificare i cambiamenti delle credenziali con controlli anti-loop
   useEffect(() => {
-    if (url && username && appPassword && onCredentialsChange) {
-      const timeoutId = setTimeout(() => {
-        onCredentialsChange({ url, username, appPassword });
-      }, 1000); // Debounce di 1 secondo
-
-      return () => clearTimeout(timeoutId);
+    // Pulisce il timeout precedente
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
     }
-  }, [url, username, appPassword, onCredentialsChange]);
+
+    // Verifica che tutti i campi siano compilati
+    if (!url.trim() || !username.trim() || !appPassword.trim()) {
+      return;
+    }
+
+    // Verifica che l'URL sia valido
+    try {
+      const urlObj = new URL(url.startsWith('http') ? url : `https://${url}`);
+      if (!urlObj.protocol.startsWith('http')) {
+        return;
+      }
+    } catch {
+      return;
+    }
+
+    // Crea una stringa unica per le credenziali correnti
+    const currentCredentials = `${url.trim()}|${username.trim()}|${appPassword.trim()}`;
+    
+    // Se le credenziali non sono cambiate, non fare nulla
+    if (currentCredentials === lastCredentialsRef.current) {
+      return;
+    }
+
+    // Se è già in caricamento, non fare nulla
+    if (loadingCategories) {
+      return;
+    }
+
+    // Salva le credenziali correnti e imposta un debounce più lungo
+    timeoutRef.current = setTimeout(() => {
+      lastCredentialsRef.current = currentCredentials;
+      
+      if (onCredentialsChange) {
+        const normalizedUrl = url.startsWith('http') ? url : `https://${url}`;
+        onCredentialsChange({ 
+          url: normalizedUrl.trim(), 
+          username: username.trim(), 
+          appPassword: appPassword.trim() 
+        });
+      }
+    }, 2000); // Debounce di 2 secondi
+
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, [url, username, appPassword, onCredentialsChange, loadingCategories]);
 
   const handlePublish = async () => {
     if (!post) {
