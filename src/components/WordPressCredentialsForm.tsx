@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
 
 type Props = {
-  post: { title: string; content: string; tags?: string[] } | null;
+  post: { title: string; content: string; tags?: string[]; category?: string } | null;
 };
 
 export default function WordPressCredentialsForm({ post }: Props) {
@@ -30,7 +30,7 @@ export default function WordPressCredentialsForm({ post }: Props) {
       toast({
         title: "Post inviato (mock)!",
         description:
-          "Per motivi di sicurezza e limiti tecnici, questa demo non invia davvero i dati a WordPress. Collega Supabase per realizzare la pubblicazione automatica sicura.",
+          `Post "${post.title}" pubblicato nella categoria "${post.category || 'Generale'}" su WordPress (demo).`,
       });
       setSubmitting(false);
     }, 900);

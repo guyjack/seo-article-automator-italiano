@@ -5,24 +5,41 @@ import WordPressCredentialsForm from "./WordPressCredentialsForm";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/components/ui/use-toast";
 
 type GeneratedPost = {
   title: string;
   content: string;
   tags?: string[];
+  category: string;
 };
 
-const sampleSEOPost = (topic: string): GeneratedPost => ({
+const sampleSEOPost = (topic: string, category: string): GeneratedPost => ({
   title: `Come ottimizzare "${topic}" per la SEO`,
   content:
     `Scopri le migliori strategie per migliorare il posizionamento del tuo sito su "${topic}". ` +
     "Analisi parole chiave, contenuti originali e tecniche avanzate per battere la concorrenza su Google.",
   tags: ["SEO", topic],
+  category: category,
 });
+
+const categories = [
+  "Generale",
+  "Marketing",
+  "Tecnologia", 
+  "Business",
+  "Lifestyle",
+  "Salute",
+  "Viaggi",
+  "Cucina",
+  "Sport",
+  "Moda"
+];
 
 export default function PostGeneratorForm() {
   const [topic, setTopic] = useState("");
+  const [category, setCategory] = useState("");
   const [generating, setGenerating] = useState(false);
   const [post, setPost] = useState<GeneratedPost | null>(null);
 
@@ -31,9 +48,13 @@ export default function PostGeneratorForm() {
       toast({ title: "Inserisci un argomento valido.", variant: "destructive" });
       return;
     }
+    if (!category) {
+      toast({ title: "Seleziona una categoria.", variant: "destructive" });
+      return;
+    }
     setGenerating(true);
     setTimeout(() => {
-      setPost(sampleSEOPost(topic.trim()));
+      setPost(sampleSEOPost(topic.trim(), category));
       setGenerating(false);
       toast({ title: "Post generato!", description: "Ecco l'anteprima qui sotto." });
     }, 700);
@@ -55,15 +76,34 @@ export default function PostGeneratorForm() {
             autoFocus
           />
         </div>
+        
+        <div>
+          <Label htmlFor="category" className="text-lg font-semibold">
+            Categoria <span className="text-destructive">*</span>
+          </Label>
+          <Select value={category} onValueChange={setCategory}>
+            <SelectTrigger className="mt-1">
+              <SelectValue placeholder="Seleziona una categoria" />
+            </SelectTrigger>
+            <SelectContent>
+              {categories.map((cat) => (
+                <SelectItem key={cat} value={cat}>
+                  {cat}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
         <Button
           onClick={handleGenerate}
-          disabled={generating || !topic.trim()}
+          disabled={generating || !topic.trim() || !category}
           className="w-fit px-8 py-2 mt-2"
         >
           {generating ? "Sto generando..." : "Genera post ottimizzato SEO"}
         </Button>
         <div className="border-t border-muted pt-4 text-muted-foreground text-xs">
-          L’ottimizzazione SEO sarà effettuata automaticamente (titolo, contenuto, tag).
+          L'ottimizzazione SEO sarà effettuata automaticamente (titolo, contenuto, tag).
         </div>
         <div className="hidden md:block">
           {post && (
