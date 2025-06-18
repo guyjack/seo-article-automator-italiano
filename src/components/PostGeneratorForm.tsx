@@ -122,36 +122,13 @@ export default function PostGeneratorForm() {
   };
 
   const generateImage = async (topicValue: string, categoryValue: string) => {
-    if (!topicValue.trim() || !categoryValue) return null;
-
-    setGeneratingImage(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('generate-post-image', {
-        body: { topic: topicValue.trim(), category: categoryValue }
-      });
-
-      if (error) {
-        console.error('Error generating image:', error);
-        toast({
-          title: "Errore generazione immagine",
-          description: "Impossibile generare l'immagine. Riprova più tardi.",
-          variant: "destructive"
-        });
-        return null;
-      }
-
-      return data?.imageUrl || null;
-    } catch (error) {
-      console.error('Error:', error);
-      toast({
-        title: "Errore generazione immagine",
-        description: "Errore nella generazione dell'immagine.",
-        variant: "destructive"
-      });
-      return null;
-    } finally {
-      setGeneratingImage(false);
-    }
+    // Generazione immagini temporaneamente disabilitata
+    toast({
+      title: "Generazione immagini disabilitata",
+      description: "La generazione di immagini è temporaneamente non disponibile. Il post sarà creato senza immagine.",
+      variant: "default"
+    });
+    return null;
   };
 
   async function handleGenerate() {
@@ -165,37 +142,23 @@ export default function PostGeneratorForm() {
     }
     setGenerating(true);
     
-    // Genera l'immagine in parallelo
-    const imagePromise = generateImage(topic.trim(), category);
-    
     setTimeout(async () => {
-      const imageUrl = await imagePromise;
       const generatedPost = sampleSEOPost(topic.trim(), category);
-      
-      if (imageUrl) {
-        generatedPost.imageUrl = imageUrl;
-      }
-      
       setPost(generatedPost);
       setGenerating(false);
       toast({ 
         title: "Post generato!", 
-        description: imageUrl ? "Post e immagine generati con successo." : "Post generato (immagine non disponibile)."
+        description: "Post generato con successo (immagine temporaneamente non disponibile)."
       });
     }, 700);
   }
 
   const handleRegenerateImage = async () => {
-    if (!post || !topic.trim() || !category) return;
-    
-    const imageUrl = await generateImage(topic.trim(), category);
-    if (imageUrl && post) {
-      setPost({ ...post, imageUrl });
-      toast({
-        title: "Immagine rigenerata!",
-        description: "Nuova immagine ottimizzata SEO generata."
-      });
-    }
+    toast({
+      title: "Generazione immagini disabilitata",
+      description: "La generazione di immagini è temporaneamente non disponibile.",
+      variant: "default"
+    });
   };
 
   const availableCategories = wpCategories.length > 0 ? wpCategories : defaultCategories;
@@ -258,32 +221,18 @@ export default function PostGeneratorForm() {
         >
           {generating ? "Sto generando..." : "Genera post ottimizzato SEO"}
         </Button>
+        
         <div className="border-t border-muted pt-4 text-muted-foreground text-xs">
           L'ottimizzazione SEO sarà effettuata automaticamente (titolo, contenuto, tag).
+          <br />
+          ⚠️ Generazione immagini temporaneamente disabilitata per problemi tecnici.
         </div>
+        
         <div className="hidden md:block">
-          {(post || generatingImage) && (
+          {post && (
             <>
-              {post?.imageUrl || generatingImage ? (
-                <>
-                  <ImagePreview
-                    imageUrl={post?.imageUrl || null}
-                    topic={topic}
-                    category={category}
-                    onRegenerate={handleRegenerateImage}
-                    generating={generatingImage}
-                  />
-                  <div className="mt-6">
-                    <div className="font-semibold mt-6 mb-2 text-primary">Anteprima post</div>
-                    <PostPreview post={post} />
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="font-semibold mt-6 mb-2 text-primary">Anteprima post</div>
-                  <PostPreview post={post} />
-                </>
-              )}
+              <div className="font-semibold mt-6 mb-2 text-primary">Anteprima post</div>
+              <PostPreview post={post} />
             </>
           )}
         </div>
@@ -295,28 +244,10 @@ export default function PostGeneratorForm() {
           loadingCategories={loadingCategories}
         />
         <div className="md:hidden mt-6">
-          {(post || generatingImage) && (
+          {post && (
             <>
-              {post?.imageUrl || generatingImage ? (
-                <>
-                  <ImagePreview
-                    imageUrl={post?.imageUrl || null}
-                    topic={topic}
-                    category={category}
-                    onRegenerate={handleRegenerateImage}
-                    generating={generatingImage}
-                  />
-                  <div className="mt-6">
-                    <div className="font-semibold mb-2 text-primary">Anteprima post</div>
-                    <PostPreview post={post} />
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="font-semibold mb-2 text-primary">Anteprima post</div>
-                  <PostPreview post={post} />
-                </>
-              )}
+              <div className="font-semibold mb-2 text-primary">Anteprima post</div>
+              <PostPreview post={post} />
             </>
           )}
         </div>
