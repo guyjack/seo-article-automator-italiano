@@ -42,17 +42,29 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Crea un prompt ottimizzato SEO per l'immagine
-    const imagePrompt = `Professional blog post header image for "${topic}" in ${category} category. Clean, modern design with vibrant colors, high quality, web-optimized, suitable for WordPress blog post. No text overlay, photorealistic style, engaging and clickable.`;
+    // Prompt più semplice e breve per evitare errori
+    const imagePrompt = `Professional blog header image about "${topic}", ${category} category, clean modern design, high quality`;
 
     console.log('Generating image with Hugging Face prompt:', imagePrompt);
 
     const hf = new HfInference(huggingFaceToken);
 
-    const image = await hf.textToImage({
-      inputs: imagePrompt,
-      model: 'black-forest-labs/FLUX.1-schnell',
-    });
+    // Prova prima con FLUX.1-schnell, se fallisce usa un modello alternativo
+    let image;
+    try {
+      image = await hf.textToImage({
+        inputs: imagePrompt,
+        model: 'black-forest-labs/FLUX.1-schnell',
+      });
+    } catch (fluxError) {
+      console.log('FLUX.1-schnell failed, trying alternative model:', fluxError.message);
+      
+      // Fallback a un modello più stabile
+      image = await hf.textToImage({
+        inputs: imagePrompt,
+        model: 'stabilityai/stable-diffusion-2-1',
+      });
+    }
 
     // Convert the blob to a base64 string
     const arrayBuffer = await image.arrayBuffer();
@@ -74,7 +86,10 @@ const handler = async (req: Request): Promise<Response> => {
   } catch (error: any) {
     console.error('Error in generate-post-image function:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: `Errore generazione immagine: ${error.message}`,
+        details: error.toString()
+      }),
       {
         status: 500,
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
