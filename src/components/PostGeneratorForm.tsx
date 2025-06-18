@@ -1,7 +1,7 @@
-
 import { useState, useEffect } from "react";
 import PostPreview from "./PostPreview";
 import WordPressCredentialsForm from "./WordPressCredentialsForm";
+import ImagePreview from "./ImagePreview";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,6 +14,7 @@ type GeneratedPost = {
   content: string;
   tags?: string[];
   category: string;
+  imageUrl?: string;
 };
 
 type WordPressCategory = {
@@ -53,6 +54,7 @@ export default function PostGeneratorForm() {
   const [wpCategories, setWpCategories] = useState<WordPressCategory[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(false);
   const [wpCredentials, setWpCredentials] = useState<{url: string, username: string, appPassword: string} | null>(null);
+  const [generatingImage, setGeneratingImage] = useState(false);
 
   const handleLoadWpCategories = async (credentials: {url: string, username: string, appPassword: string}) => {
     if (!credentials.url || !credentials.username || !credentials.appPassword) {
@@ -100,7 +102,40 @@ export default function PostGeneratorForm() {
     }
   };
 
-  function handleGenerate() {
+  const generateImage = async (topicValue: string, categoryValue: string) => {
+    if (!topicValue.trim() || !categoryValue) return null;
+
+    setGeneratingImage(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-post-image', {
+        body: { topic: topicValue.trim(), category: categoryValue }
+      });
+
+      if (error) {
+        console.error('Error generating image:', error);
+        toast({
+          title: "Errore generazione immagine",
+          description: "Impossibile generare l'immagine. Riprova più tardi.",
+          variant: "destructive"
+        });
+        return null;
+      }
+
+      return data?.imageUrl || null;
+    } catch (error) {
+      console.error('Error:', error);
+      toast({
+        title: "Errore generazione immagine",
+        description: "Errore nella generazione dell'immagine.",
+        variant: "destructive"
+      });
+      return null;
+    } finally {
+      setGeneratingImage(false);
+    }
+  };
+
+  async function handleGenerate() {
     if (!topic.trim()) {
       toast({ title: "Inserisci un argomento valido.", variant: "destructive" });
       return;
@@ -110,12 +145,39 @@ export default function PostGeneratorForm() {
       return;
     }
     setGenerating(true);
-    setTimeout(() => {
-      setPost(sampleSEOPost(topic.trim(), category));
+    
+    // Genera l'immagine in parallelo
+    const imagePromise = generateImage(topic.trim(), category);
+    
+    setTimeout(async () => {
+      const imageUrl = await imagePromise;
+      const generatedPost = sampleSEOPost(topic.trim(), category);
+      
+      if (imageUrl) {
+        generatedPost.imageUrl = imageUrl;
+      }
+      
+      setPost(generatedPost);
       setGenerating(false);
-      toast({ title: "Post generato!", description: "Ecco l'anteprima qui sotto." });
+      toast({ 
+        title: "Post generato!", 
+        description: imageUrl ? "Post e immagine generati con successo." : "Post generato (immagine non disponibile)."
+      });
     }, 700);
   }
+
+  const handleRegenerateImage = async () => {
+    if (!post || !topic.trim() || !category) return;
+    
+    const imageUrl = await generateImage(topic.trim(), category);
+    if (imageUrl && post) {
+      setPost({ ...post, imageUrl });
+      toast({
+        title: "Immagine rigenerata!",
+        description: "Nuova immagine ottimizzata SEO generata."
+      });
+    }
+  };
 
   const availableCategories = wpCategories.length > 0 ? wpCategories : defaultCategories;
   const categoryDisplayName = (cat: any) => typeof cat === 'string' ? cat : cat.name;
@@ -181,10 +243,28 @@ export default function PostGeneratorForm() {
           L'ottimizzazione SEO sarà effettuata automaticamente (titolo, contenuto, tag).
         </div>
         <div className="hidden md:block">
-          {post && (
+          {(post || generatingImage) && (
             <>
-              <div className="font-semibold mt-6 mb-2 text-primary">Anteprima post</div>
-              <PostPreview post={post} />
+              {post?.imageUrl || generatingImage ? (
+                <>
+                  <ImagePreview
+                    imageUrl={post?.imageUrl || null}
+                    topic={topic}
+                    category={category}
+                    onRegenerate={handleRegenerateImage}
+                    generating={generatingImage}
+                  />
+                  <div className="mt-6">
+                    <div className="font-semibold mt-6 mb-2 text-primary">Anteprima post</div>
+                    <PostPreview post={post} />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="font-semibold mt-6 mb-2 text-primary">Anteprima post</div>
+                  <PostPreview post={post} />
+                </>
+              )}
             </>
           )}
         </div>
@@ -196,10 +276,28 @@ export default function PostGeneratorForm() {
           loadingCategories={loadingCategories}
         />
         <div className="md:hidden mt-6">
-          {post && (
+          {(post || generatingImage) && (
             <>
-              <div className="font-semibold mb-2 text-primary">Anteprima post</div>
-              <PostPreview post={post} />
+              {post?.imageUrl || generatingImage ? (
+                <>
+                  <ImagePreview
+                    imageUrl={post?.imageUrl || null}
+                    topic={topic}
+                    category={category}
+                    onRegenerate={handleRegenerateImage}
+                    generating={generatingImage}
+                  />
+                  <div className="mt-6">
+                    <div className="font-semibold mb-2 text-primary">Anteprima post</div>
+                    <PostPreview post={post} />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="font-semibold mb-2 text-primary">Anteprima post</div>
+                  <PostPreview post={post} />
+                </>
+              )}
             </>
           )}
         </div>

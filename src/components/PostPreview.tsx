@@ -1,11 +1,21 @@
 
 type Props = {
-  post: { title: string; content: string; tags?: string[]; category?: string };
+  post: { title: string; content: string; tags?: string[]; category?: string; imageUrl?: string };
 };
 
 export default function PostPreview({ post }: Props) {
   return (
-    <div className="rounded-lg border bg-background p-6 shadow flex flex-col gap-2">
+    <div className="rounded-lg border bg-background p-6 shadow flex flex-col gap-4">
+      {post.imageUrl && (
+        <div className="w-full aspect-video rounded-lg overflow-hidden border">
+          <img 
+            src={post.imageUrl} 
+            alt={post.title}
+            className="w-full h-full object-cover"
+          />
+        </div>
+      )}
+      
       <div className="text-xl font-bold text-primary">{post.title}</div>
       {post.category && (
         <div className="text-sm text-muted-foreground mb-2">
