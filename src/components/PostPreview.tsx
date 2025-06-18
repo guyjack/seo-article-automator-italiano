@@ -1,9 +1,14 @@
 
 type Props = {
-  post: { title: string; content: string; tags?: string[]; category?: string; imageUrl?: string };
+  post: { title: string; content: string; tags?: string[]; category?: string; imageUrl?: string } | null;
 };
 
 export default function PostPreview({ post }: Props) {
+  // Controllo di sicurezza per evitare errori quando post è null
+  if (!post) {
+    return null;
+  }
+
   return (
     <div className="rounded-lg border bg-background p-6 shadow flex flex-col gap-4">
       {post.imageUrl && (
