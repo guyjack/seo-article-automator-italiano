@@ -1,5 +1,6 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { HfInference } from 'https://esm.sh/@huggingface/inference@2.3.2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -18,10 +19,10 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
-    if (!openAIApiKey) {
+    const huggingFaceToken = Deno.env.get('HUGGING_FACE_ACCESS_TOKEN');
+    if (!huggingFaceToken) {
       return new Response(
-        JSON.stringify({ error: 'OpenAI API key non configurata' }),
+        JSON.stringify({ error: 'Hugging Face token non configurato' }),
         {
           status: 500,
           headers: { 'Content-Type': 'application/json', ...corsHeaders },
@@ -44,47 +45,21 @@ const handler = async (req: Request): Promise<Response> => {
     // Crea un prompt ottimizzato SEO per l'immagine
     const imagePrompt = `Professional blog post header image for "${topic}" in ${category} category. Clean, modern design with vibrant colors, high quality, web-optimized, suitable for WordPress blog post. No text overlay, photorealistic style, engaging and clickable.`;
 
-    console.log('Generating image with prompt:', imagePrompt);
+    console.log('Generating image with Hugging Face prompt:', imagePrompt);
 
-    const response = await fetch('https://api.openai.com/v1/images/generations', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-image-1',
-        prompt: imagePrompt,
-        n: 1,
-        size: '1024x1024',
-        quality: 'high',
-        output_format: 'webp',
-        output_compression: 85,
-      }),
+    const hf = new HfInference(huggingFaceToken);
+
+    const image = await hf.textToImage({
+      inputs: imagePrompt,
+      model: 'black-forest-labs/FLUX.1-schnell',
     });
 
-    if (!response.ok) {
-      console.error('OpenAI API error:', response.status, response.statusText);
-      const errorData = await response.text();
-      console.error('Error details:', errorData);
-      return new Response(
-        JSON.stringify({ 
-          error: `Errore API OpenAI: ${response.status} ${response.statusText}` 
-        }),
-        {
-          status: response.status,
-          headers: { 'Content-Type': 'application/json', ...corsHeaders },
-        }
-      );
-    }
+    // Convert the blob to a base64 string
+    const arrayBuffer = await image.arrayBuffer();
+    const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+    const imageUrl = `data:image/png;base64,${base64}`;
 
-    const data = await response.json();
-    
-    // gpt-image-1 restituisce base64, non URL
-    const imageBase64 = data.data[0].b64_json;
-    const imageUrl = `data:image/webp;base64,${imageBase64}`;
-
-    console.log('Image generated successfully');
+    console.log('Image generated successfully with Hugging Face');
 
     return new Response(JSON.stringify({ 
       imageUrl,
