@@ -42,28 +42,41 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Prompt più semplice e breve per evitare errori
-    const imagePrompt = `Professional blog header image about "${topic}", ${category} category, clean modern design, high quality`;
+    // Prompt semplice e ottimizzato
+    const imagePrompt = `${topic}, ${category}, professional blog image, high quality`;
 
-    console.log('Generating image with Hugging Face prompt:', imagePrompt);
+    console.log('Generating image with prompt:', imagePrompt);
 
     const hf = new HfInference(huggingFaceToken);
 
-    // Prova prima con FLUX.1-schnell, se fallisce usa un modello alternativo
+    // Lista di modelli da provare in ordine di preferenza
+    const models = [
+      'runwayml/stable-diffusion-v1-5',
+      'CompVis/stable-diffusion-v1-4',
+      'stabilityai/stable-diffusion-2-base'
+    ];
+
     let image;
-    try {
-      image = await hf.textToImage({
-        inputs: imagePrompt,
-        model: 'black-forest-labs/FLUX.1-schnell',
-      });
-    } catch (fluxError) {
-      console.log('FLUX.1-schnell failed, trying alternative model:', fluxError.message);
-      
-      // Fallback a un modello più stabile
-      image = await hf.textToImage({
-        inputs: imagePrompt,
-        model: 'stabilityai/stable-diffusion-2-1',
-      });
+    let lastError;
+
+    for (const model of models) {
+      try {
+        console.log(`Trying model: ${model}`);
+        image = await hf.textToImage({
+          inputs: imagePrompt,
+          model: model,
+        });
+        console.log(`Success with model: ${model}`);
+        break;
+      } catch (error) {
+        console.log(`Model ${model} failed:`, error.message);
+        lastError = error;
+        continue;
+      }
+    }
+
+    if (!image) {
+      throw new Error(`Tutti i modelli hanno fallito. Ultimo errore: ${lastError?.message}`);
     }
 
     // Convert the blob to a base64 string
@@ -71,7 +84,7 @@ const handler = async (req: Request): Promise<Response> => {
     const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
     const imageUrl = `data:image/png;base64,${base64}`;
 
-    console.log('Image generated successfully with Hugging Face');
+    console.log('Image generated successfully');
 
     return new Response(JSON.stringify({ 
       imageUrl,
