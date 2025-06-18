@@ -42,18 +42,18 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Prompt semplice e ottimizzato
-    const imagePrompt = `${topic}, ${category}, professional blog image, high quality`;
+    // Prompt ottimizzato e più semplice
+    const imagePrompt = `${topic}, modern blog image, professional, high quality`;
 
     console.log('Generating image with prompt:', imagePrompt);
 
     const hf = new HfInference(huggingFaceToken);
 
-    // Lista di modelli da provare in ordine di preferenza
+    // Proviamo con modelli più recenti e affidabili
     const models = [
+      'stabilityai/stable-diffusion-xl-base-1.0',
       'runwayml/stable-diffusion-v1-5',
-      'CompVis/stable-diffusion-v1-4',
-      'stabilityai/stable-diffusion-2-base'
+      'CompVis/stable-diffusion-v1-4'
     ];
 
     let image;
@@ -62,11 +62,20 @@ const handler = async (req: Request): Promise<Response> => {
     for (const model of models) {
       try {
         console.log(`Trying model: ${model}`);
-        image = await hf.textToImage({
+        
+        const response = await hf.textToImage({
           inputs: imagePrompt,
           model: model,
+          parameters: {
+            num_inference_steps: 20,
+            guidance_scale: 7.5,
+            width: 512,
+            height: 512
+          }
         });
+        
         console.log(`Success with model: ${model}`);
+        image = response;
         break;
       } catch (error) {
         console.log(`Model ${model} failed:`, error.message);
@@ -76,7 +85,18 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     if (!image) {
-      throw new Error(`Tutti i modelli hanno fallito. Ultimo errore: ${lastError?.message}`);
+      console.error('All models failed, last error:', lastError);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Impossibile generare immagine al momento',
+          details: 'Tutti i modelli di generazione immagini sono temporaneamente non disponibili. Riprova più tardi.',
+          lastError: lastError?.message 
+        }),
+        {
+          status: 503,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        }
+      );
     }
 
     // Convert the blob to a base64 string
