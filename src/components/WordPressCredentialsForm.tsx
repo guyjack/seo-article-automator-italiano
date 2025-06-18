@@ -76,14 +76,43 @@ export default function WordPressCredentialsForm({ post, onCredentialsChange, lo
   }, [url, username, appPassword, onCredentialsChange, loadingCategories]);
 
   const handlePublish = async () => {
+    console.log("Attempting to publish with credentials:", {
+      url: `"${url}"`,
+      username: `"${username}"`,
+      appPassword: appPassword ? "***provided***" : "***empty***",
+      urlTrimmed: `"${url.trim()}"`,
+      usernameTrimmed: `"${username.trim()}"`,
+      appPasswordTrimmed: appPassword.trim() ? "***provided***" : "***empty***"
+    });
+
     if (!post) {
       toast({ title: "Genera prima un post!", variant: "destructive" });
       return;
     }
-    if (!url || !username || !appPassword) {
-      toast({ title: "Completa tutti i campi delle credenziali.", variant: "destructive" });
+
+    const trimmedUrl = url.trim();
+    const trimmedUsername = username.trim();
+    const trimmedAppPassword = appPassword.trim();
+
+    if (!trimmedUrl || !trimmedUsername || !trimmedAppPassword) {
+      console.log("Missing fields:", {
+        url: !trimmedUrl ? "MISSING" : "OK",
+        username: !trimmedUsername ? "MISSING" : "OK", 
+        appPassword: !trimmedAppPassword ? "MISSING" : "OK"
+      });
+      
+      toast({ 
+        title: "Completa tutti i campi delle credenziali.", 
+        description: `Campi mancanti: ${[
+          !trimmedUrl && "URL",
+          !trimmedUsername && "Username", 
+          !trimmedAppPassword && "App Password"
+        ].filter(Boolean).join(", ")}`,
+        variant: "destructive" 
+      });
       return;
     }
+
     setSubmitting(true);
     // MOCK ONLY — L'invio reale necessita di backend/supabase!
     setTimeout(() => {
