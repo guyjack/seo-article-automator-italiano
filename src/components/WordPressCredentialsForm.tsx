@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -7,13 +7,26 @@ import { toast } from "@/components/ui/use-toast";
 
 type Props = {
   post: { title: string; content: string; tags?: string[]; category?: string } | null;
+  onCredentialsChange?: (credentials: {url: string, username: string, appPassword: string}) => void;
+  loadingCategories?: boolean;
 };
 
-export default function WordPressCredentialsForm({ post }: Props) {
+export default function WordPressCredentialsForm({ post, onCredentialsChange, loadingCategories }: Props) {
   const [url, setUrl] = useState("");
   const [username, setUsername] = useState("");
   const [appPassword, setAppPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  // Effetto per notificare i cambiamenti delle credenziali
+  useEffect(() => {
+    if (url && username && appPassword && onCredentialsChange) {
+      const timeoutId = setTimeout(() => {
+        onCredentialsChange({ url, username, appPassword });
+      }, 1000); // Debounce di 1 secondo
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [url, username, appPassword, onCredentialsChange]);
 
   const handlePublish = async () => {
     if (!post) {
@@ -72,6 +85,13 @@ export default function WordPressCredentialsForm({ post }: Props) {
         autoComplete="new-password"
         required
       />
+      
+      {loadingCategories && (
+        <div className="text-sm text-muted-foreground bg-blue-50 border border-blue-200 rounded p-2">
+          🔄 Caricamento categorie da WordPress...
+        </div>
+      )}
+      
       <Button
         type="submit"
         className="mt-4 font-semibold"
