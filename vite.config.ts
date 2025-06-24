@@ -1,3 +1,6 @@
+// Aggiungi in cima al file vite.config.js o main.js
+import { webcrypto as crypto } from 'crypto';
+if (!globalThis.crypto) globalThis.crypto = crypto;
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
