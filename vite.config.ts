@@ -1,3 +1,12 @@
+import { defineConfig } from 'vite';
+
+export default defineConfig({
+  resolve: {
+    alias: {
+      crypto: 'crypto-browserify'
+    }
+  }
+});
 import { webcrypto as crypto } from 'crypto';
 if (!globalThis.crypto) {
   globalThis.crypto = crypto;
