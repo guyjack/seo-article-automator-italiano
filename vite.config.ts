@@ -1,3 +1,12 @@
+import { webcrypto as crypto } from 'crypto';
+if (!globalThis.crypto) {
+  globalThis.crypto = crypto;
+}
+if (!globalThis.crypto.getRandomValues) {
+  globalThis.crypto.getRandomValues = function(buffer) {
+    return crypto.getRandomValues(buffer);
+  };
+}
 // Aggiungi in cima al file vite.config.js o main.js
 import { webcrypto as crypto } from 'crypto';
 if (!globalThis.crypto) globalThis.crypto = crypto;
